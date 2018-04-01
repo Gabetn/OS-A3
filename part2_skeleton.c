@@ -112,7 +112,45 @@ void accessSCAN(int *request, int numRequest)
     /*int (*funPtr)(const void *, const void *);
     funPtr = &cmpfunc;*/
     
-    printSeqNPerformance(output, numRequest);
+    qsort(request, numRequest, sizeof(int), &cmpfunc);
+    int loc, start;
+    for(int i=0; i<numRequest; i++){
+        if(request[i] >= START){
+            loc = i;
+            break;
+        }
+        else if(i==numRequest-1)
+            loc=numRequest;
+    }
+    start=loc;
+    int dir = 1; //dir will be direction in which scan travels 1=right
+    int inCtr = 0, outCtr = 0, newCnt=numRequest;
+    while(inCtr < numRequest){ //TODO: should this switch dir or always right
+        if(loc<0)
+            printf("Error invalid location\n");
+        
+        if(loc == numRequest){ //if need to turn around;
+            if(output[outCtr-1]!= HIGH){ //jump to high. 
+                output = (int *) realloc(output, sizeof(int)); //add extra space
+                output[outCtr] = HIGH;
+                outCtr++;
+                newCnt++;
+            }
+            dir = -1;
+            loc = start-1;
+            if(loc<0)
+                printf("Error invalid location\n");
+        }
+        else{
+            output[outCtr] = request[loc];
+            inCtr++;
+            loc+=dir;
+            outCtr++;
+        }
+    }
+
+    
+    printSeqNPerformance(output, newCnt);
     printf("----------------\n");
     return;
 }
@@ -205,6 +243,12 @@ int main()
     for (i = 0; i < numRequest; i++)
     {
         scanf("%d", &request[i]);
+        if(request[i]>HIGH || request[i]<LOW){ //NOTE: input validation
+            printf("INVALID INPUT: input must be between %d and %d (inclusive)\n", LOW, HIGH);
+            free((void*)request);
+            free((void*)output);
+            return -1;
+        }
     }
 
     printf("\nSelect the policy : \n");
