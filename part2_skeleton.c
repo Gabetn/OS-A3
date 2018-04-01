@@ -109,7 +109,10 @@ void accessSCAN(int *request, int numRequest)
 	//write your logic here
     printf("\n----------------\n");
     printf("SCAN :");
-    //printSeqNPerformance(newRequest, newCnt);
+    /*int (*funPtr)(const void *, const void *);
+    funPtr = &cmpfunc;*/
+    
+    printSeqNPerformance(output, numRequest);
     printf("----------------\n");
     return;
 }
@@ -120,7 +123,49 @@ void accessCSCAN(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("CSCAN :");
-    //printSeqNPerformance(newRequest, newCnt);
+
+    qsort(request, numRequest, sizeof(int), &cmpfunc);
+    int loc;
+    for(int i=0; i<numRequest; i++){
+        if(request[i] >= START){
+            loc = i;
+            break;
+        }
+        else if(i==numRequest-1)
+            loc=numRequest;
+    }
+    int inCtr = 0, outCtr = 0, newCnt=numRequest;
+    while(inCtr < numRequest){ //TODO: should this switch dir or always right
+        if(loc == numRequest){ //if need to loop to 0; 
+            if(output[outCtr-1]!= HIGH){
+                output = (int *) realloc(output, sizeof(int)); //add extra space
+                output[outCtr] = HIGH;
+                outCtr++;
+                newCnt++;
+            }
+            loc = 0; 
+            output[outCtr] = 0;
+            outCtr++;
+            
+            //If you loop back to 0 and request for 0 is queued next, don't repeat
+            if(request[loc] == 0){
+                loc++;
+                inCtr++;
+            }else{
+                output = (int *) realloc(output, sizeof(int)); //add extra space
+                newCnt++;
+            }
+
+        }
+        else{
+            output[outCtr] = request[loc];
+            inCtr++;
+            loc++;
+            outCtr++;
+        }
+    }
+
+    printSeqNPerformance(output, newCnt);
     printf("----------------\n");
     return;
 }
