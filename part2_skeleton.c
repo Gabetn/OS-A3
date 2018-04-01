@@ -26,8 +26,10 @@ void swap(int *a, int *b)
     }
 }
 
+int *output;
+
 //Prints the sequence and the performance metric
-void printSeqNPerformance(int *request, int numRequest)
+void printSeqNPerformance(int *request, int numRequest) //given an array print the elements in order as well as number of tracks traversed.
 {
     int i, last, acc = 0;
     last = START;
@@ -60,7 +62,42 @@ void accessSSTF(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("SSTF :");
-    printSeqNPerformance(request, numRequest);
+    int last,next, diff, numPrev, notUsed;
+    int prev[numRequest]; //previous is a temporary array for holding indicies
+    int min;
+    numPrev=0;
+    last = START;
+    for(int i=0; i<numRequest; i++){ //for each possible output value
+        min = HIGH;
+        next=-1;
+        for(int j=0; j<numRequest; j++){  //loop through all input values
+            notUsed=1; //true
+            diff = abs(last - request[j]);  //dist from current out to all potential next values
+            
+            if(diff<min){
+                for(int k=0; k<numPrev; k++){ //check if value was previously used
+                    if(request[j] == request[prev[k]]){
+                        notUsed = 0; //false          
+                        break;
+                    }
+                }
+                if(notUsed){
+                    min=diff;
+                    next=j;
+                }
+            } //if
+
+        } //for j
+        if(next!=-1){
+            output[i] = request[next];
+            prev[numPrev] = next;
+            numPrev++;
+        }else{
+            printf("Error A\n");
+        }        
+        last = output[i];
+    }
+    printSeqNPerformance(output, numRequest);
     printf("----------------\n");
     return;
 }
@@ -72,7 +109,7 @@ void accessSCAN(int *request, int numRequest)
 	//write your logic here
     printf("\n----------------\n");
     printf("SCAN :");
-    printSeqNPerformance(newRequest, newCnt);
+    //printSeqNPerformance(newRequest, newCnt);
     printf("----------------\n");
     return;
 }
@@ -83,7 +120,7 @@ void accessCSCAN(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("CSCAN :");
-    printSeqNPerformance(newRequest, newCnt);
+    //printSeqNPerformance(newRequest, newCnt);
     printf("----------------\n");
     return;
 }
@@ -94,7 +131,7 @@ void accessLOOK(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("LOOK :");
-    printSeqNPerformance(newRequest, newCnt);
+    //printSeqNPerformance(newRequest, newCnt);
     printf("----------------\n");
     return;
 }
@@ -105,20 +142,20 @@ void accessCLOOK(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("CLOOK :");
-    printSeqNPerformance(newRequest,newCnt);
+    //printSeqNPerformance(newRequest,newCnt);
     printf("----------------\n");
     return;
 }
 
 int main()
 {
-    int *request, numRequest, i,ans;
+    int *request, numRequest, i,ans; //NOTE: request is a pointer to malloc array of ints storing the request positions in ints
 
     //allocate memory to store requests
     printf("Enter the number of disk access requests : ");
     scanf("%d", &numRequest);
-    request = malloc(numRequest * sizeof(int));
-
+    request = malloc(numRequest * sizeof(int)); //note: shouldn't this be cast into a int * or does the assignment cast automatically
+    output = malloc(numRequest * sizeof(int));
     printf("Enter the requests ranging between %d and %d\n", LOW, HIGH);
     for (i = 0; i < numRequest; i++)
     {
@@ -139,7 +176,7 @@ int main()
     switch (ans)
     {
     //access the disk location in FCFS
-    case 1: accessFCFS(request, numRequest);
+    case 1: accessFCFS(request, numRequest); 
         break;
 
     //access the disk location in SSTF
@@ -165,5 +202,7 @@ int main()
     default:
         break;
     }
+    free((void*)request);
+    free((void*)output);
     return 0;
 }
