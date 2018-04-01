@@ -74,9 +74,9 @@ void accessSSTF(int *request, int numRequest)
             notUsed=1; //true
             diff = abs(last - request[j]);  //dist from current out to all potential next values
             
-            if(diff<min){
-                for(int k=0; k<numPrev; k++){ //check if value was previously used
-                    if(request[j] == request[prev[k]]){
+            if(diff<=min){
+                for(int k=0; k<numPrev; k++){ //check if index was previously used
+                    if(j == prev[k]){
                         notUsed = 0; //false          
                         break;
                     }
@@ -93,7 +93,7 @@ void accessSSTF(int *request, int numRequest)
             prev[numPrev] = next;
             numPrev++;
         }else{
-            printf("Error A\n");
+            printf("Error: Failed to select next value\n");
         }        
         last = output[i];
     }
