@@ -250,7 +250,7 @@ void accessLOOK(int *request, int numRequest)
 }
 
 //access the disk location in CLOOK
-void accessCLOOK(int *request, int numRequest)
+void accessCLOOK(int *request, int numRequest) 
 {
     //write your logic here
     printf("\n----------------\n");
@@ -291,7 +291,7 @@ void accessCLOOK(int *request, int numRequest)
         }
     }
 
-    //printSeqNPerformance(newRequest,newCnt);
+    printSeqNPerformance(output,newCnt);
     printf("----------------\n");
     return;
 }
