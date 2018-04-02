@@ -118,7 +118,8 @@ void accessSCAN(int *request, int numRequest)
             loc = i;
             if( START<((HIGH-LOW)/2) ){ //if start on lhs
                 dir = -1;
-                loc--;
+                if(request[i] > START)
+                    loc--;
             }
             break;
         }
