@@ -3,7 +3,7 @@
 
 //FORWARD Declaration
 void free2DArr(int **arr);
-void freedom();
+void freedom(int stat);
 void allocate2DArr(int **arr, int rows, int cols);
 
 //GLOBAL vars. 
@@ -38,7 +38,7 @@ int main()
     //initialize max array
     allocate2DArr(max,numProcesses,numResourceType);
 
-    freedom();
+    freedom(0);
     return 0;
 }
 
@@ -51,7 +51,7 @@ void free2DArr(int **arr){ //HELPER
         }
     }
 }
-void freedom(){ //HELPER: called either when program fails or exits, used to automate freeing arrays. 
+void freedom(int stat){ //HELPER: called either when program fails or exits, used to automate freeing arrays. 
     free(avail);
     free2DArr(max);
     free(max);
@@ -60,7 +60,7 @@ void freedom(){ //HELPER: called either when program fails or exits, used to aut
     free2DArr(hold);
     free(hold);
     
-    exit(EXIT_FAILURE);
+    exit(stat); //0 = success, else fail
 }
 void allocate2DArr(int **arr, int rows, int cols) {//TODO: delete if not needed
 
@@ -68,7 +68,7 @@ void allocate2DArr(int **arr, int rows, int cols) {//TODO: delete if not needed
     arr = (int **) malloc(sizeof(int*)*rows);
     if(arr==NULL){
         printf("ERROR: failed to allocate memory for 2D vector\n");
-        freedom(); 
+        freedom(-1); 
         return -1;
     }
     //allocate second layer of pointers
@@ -76,7 +76,7 @@ void allocate2DArr(int **arr, int rows, int cols) {//TODO: delete if not needed
         arr[i] = (int *) malloc(sizeof(int)*cols);
         if(arr[i]==NULL){
             printf("ERROR: failed to allocate memory for max vector\n");
-            freedom();
+            freedom(-1);
             return -1;
         }
     }
