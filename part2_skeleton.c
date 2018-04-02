@@ -112,20 +112,27 @@ void accessSCAN(int *request, int numRequest)
     
     qsort(request, numRequest, sizeof(int), &cmpfunc);
     int loc, start;
+    int dir=1; //dir will be direction in which scan travels 1=right
     for(int i=0; i<numRequest; i++){
         if(request[i] >= START){
             loc = i;
+            if( START<((HIGH-LOW)/2) ){ //if start on lhs
+                dir = -1;
+                loc--;
+            }
             break;
         }
-        else if(i==numRequest-1)
-            loc=numRequest;
+        else if(i==numRequest-1){ //if start greater than all requests
+            loc=numRequest-1;
+            dir = -1;
+        }
+            
     }
     start=loc;
-    int dir = 1; //dir will be direction in which scan travels 1=right
+    
     int inCtr = 0, outCtr = 0, newCnt=numRequest;
+    
     while(inCtr < numRequest){ //TODO: should this switch dir or always right
-        if(loc<0)
-            printf("Error invalid location\n");
         
         if(loc == numRequest){ //if need to turn around;
             if(output[outCtr-1]!= HIGH){ //jump to high. 
@@ -134,10 +141,19 @@ void accessSCAN(int *request, int numRequest)
                 outCtr++;
                 newCnt++;
             }
-            dir = -1;
+            dir = -1; //flips dir
             loc = start-1;
-            if(loc<0)
-                printf("Error invalid location\n");
+
+        }
+        else if(loc == -1){
+            if(output[outCtr-1]!= LOW){ //jump to low. 
+                output = (int *) realloc(output, sizeof(int)); //add extra space
+                output[outCtr] = LOW;
+                outCtr++;
+                newCnt++;
+            }
+            dir = 1;
+            loc = start+1;
         }
         else{
             output[outCtr] = request[loc];
