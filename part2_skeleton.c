@@ -109,8 +109,6 @@ void accessSCAN(int *request, int numRequest)
 	//write your logic here
     printf("\n----------------\n");
     printf("SCAN :");
-    /*int (*funPtr)(const void *, const void *);
-    funPtr = &cmpfunc;*/
     
     qsort(request, numRequest, sizeof(int), &cmpfunc);
     int loc, start;
@@ -214,7 +212,39 @@ void accessLOOK(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("LOOK :");
-    //printSeqNPerformance(newRequest, newCnt);
+    
+    qsort(request, numRequest, sizeof(int), &cmpfunc);
+    int loc, start;
+    for(int i=0; i<numRequest; i++){
+        if(request[i] >= START){
+            loc = i;
+            break;
+        }
+        else if(i==numRequest-1)
+            loc=numRequest;
+    }
+    start=loc;
+    int dir = 1; //dir will be direction in which scan travels 1=right
+    int inCtr = 0, outCtr = 0;
+    while(inCtr < numRequest){ //TODO: should this switch dir or always right
+        if(loc<0)
+            printf("Error invalid location\n");
+        
+        if(loc == numRequest){ //if need to turn around;
+            dir = -1;
+            loc = start-1;
+            if(loc<0)
+                printf("Error invalid location\n");
+        }
+        else{
+            output[outCtr] = request[loc];
+            inCtr++;
+            loc+=dir;
+            outCtr++;
+        }
+    }
+        
+    printSeqNPerformance(output, numRequest);
     printf("----------------\n");
     return;
 }
@@ -225,6 +255,42 @@ void accessCLOOK(int *request, int numRequest)
     //write your logic here
     printf("\n----------------\n");
     printf("CLOOK :");
+
+    qsort(request, numRequest, sizeof(int), &cmpfunc);
+    int loc;
+    for(int i=0; i<numRequest; i++){
+        if(request[i] >= START){
+            loc = i;
+            break;
+        }
+        else if(i==numRequest-1)
+            loc=numRequest;
+    }
+    int inCtr = 0, outCtr = 0, newCnt=numRequest;
+    while(inCtr < numRequest){ //TODO: should this switch dir or always right
+        if(loc == numRequest){ //if need to loop to 0; 
+            loc = 0; 
+            output[outCtr] = 0;
+            outCtr++;
+            
+            //If you loop back to 0 and request for 0 is queued next, don't repeat
+            if(request[loc] == 0){
+                loc++;
+                inCtr++;
+            }else{
+                output = (int *) realloc(output, sizeof(int)); //add extra space
+                newCnt++;
+            }
+
+        }
+        else{
+            output[outCtr] = request[loc];
+            inCtr++;
+            loc++;
+            outCtr++;
+        }
+    }
+
     //printSeqNPerformance(newRequest,newCnt);
     printf("----------------\n");
     return;
