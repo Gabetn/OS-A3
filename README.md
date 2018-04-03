@@ -15,10 +15,14 @@ Do we need to deal with input validation (_e.g._ sector > max) _and_ do we also 
 1. **Max Resource Claim per process / resource**
     The maximum number of claims a process can make for that resource. 
     Does that mean then that the number of claims arent based on process-by-process basis, but rather a resource-by-resource basis. Thus a process can make varying 
-    
-2. **Protection**
+
+2. **Allocation**
+    Do we allocate as we go in the bankers for loop. e.g. if the first request is safe for process 1, do we allocate it immediately then check for resource 2? or do we only allocate all resources when we know all requests will be safe?   
+        if _Yes_: Then how do we deal with thread synchronization? would all other threads have to wait until bankers algorithm is done on one process, at which point we shouldn't be using threads.  
+
+3. **Protection**
     How many semaphores and mutex do i need?
 
-3. **General**
+4. **General**
     if only reading from a global variable on multiple threads, is having it unprotected safe? Since i'm not changing it there shouldn't be any issue right?
         Note: if not pass _numResourceTypes_ locally via method calls. 

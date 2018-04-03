@@ -15,6 +15,7 @@
 //FORWARD Declaration
 void *processSimulator(int pid);
 int bankers(int *req, int pid);
+int isSafe();
 void free2DArr(int **arr);
 void freedom(int stat);
 void allocate2DArr(int ***arr, int rows, int cols, int type);
@@ -121,13 +122,31 @@ void *processSimulator(int pid){
 }
 
 int bankers(int *req, int pid){
-    for(int i=0; i<numResourceType; i++){
+    for(int i=0; i<numResourceType; i++){ //TODO: change to j
         if(req[i] > need[pid][i]){ //sanity check
             printf("Error: requested ammount: %d, of resource: %d, exceeds need: %d \n",req[i],i,need[pid][i]);
             return -1;
         }
+        if(req[i] > avail[i]){
+            printf("Not enough of resource %d available, waiting\n",i);
+            //TODO: waiting code. 
+            bankers(req,pid); //NOTE: this creates a busy waiting loop.
+        }
+        //Provisional Allocation
+        if(isSafe()==0){
+
+        }else{//cancel allocation
+            //NOTE: how does provisional allocation work. 
+            bankers(req, pid);
+        }
 
     }
+    return(0);
+}
+
+int isSafe(){
+
+    return -1;
 }
 
 void free2DArr(int **arr){ //HELPER
