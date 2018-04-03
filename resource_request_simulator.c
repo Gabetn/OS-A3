@@ -1,5 +1,10 @@
 #include <stdio.h>  //for printf and scanf
 #include <stdlib.h> //for malloc
+#include <pthread.h>
+#include <unistd.h>
+//#include <limits.h>
+#include <semaphore.h>
+
 
 #ifdef DEBUG
     #define debug(x,y,z); prettyPrint(x,y,z);
@@ -8,9 +13,11 @@
 #endif
 
 //FORWARD Declaration
+void *processSimulator(int pid);
+int bankers(int *req, int pid);
 void free2DArr(int **arr);
 void freedom(int stat);
-void allocate2DArr(int **arr, int rows, int cols);
+void allocate2DArr(int ***arr, int rows, int cols, int type);
 void prettyPrint(int **arr, int rows, int cols); //debugger helper
 
 //GLOBAL vars. 
@@ -20,6 +27,10 @@ int *avail, **max; //QUESTION: is maxClaimResPerProcess a global value
     /*NOTE: max is double array holding the max # of units of resource R that process P will request
             Thus max is #Processes wide x #ResourceType deep*/
 int **need, **hold;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+sem_t full;
+sem_t empty;
 
 int main()
 {
@@ -43,8 +54,10 @@ int main()
     }
    
     //Allocate max array
-    allocate2DArr(max,numProcesses,numResourceType);
-    
+    allocate2DArr(&max,numProcesses,numResourceType,1);
+    allocate2DArr(&need,numProcesses,numResourceType,1);
+    allocate2DArr(&hold,numProcesses,numResourceType,0);
+
     //Initialize max array
     printf("For each process, enter the maximum amount claims allowed per resource type\n");
     for(i = 0; i<numProcesses; i++){
@@ -52,16 +65,70 @@ int main()
         for(j=0; j<numResourceType; j++){
             printf("\t Max # requests for Resource %d : ",j);
             scanf("%d", &max[i][j]);
+            need[i][j] = max[i][j];
+        }
+    }
+    printf("MAX:\n")
+    debug(max,numProcesses,numResourceType);
+    printf("NEED:\n");
+    debug(need,numProcesses,numResourceType);
+    printf("HOLD:\n");
+    debug(hold,numProcesses,numResourceType);
+    
+    /*pthread_t processes[numProcesses];
+    sem_init(&full, 0, 0);
+    sem_init(&empty, 0, 99);
+    
+    int status;
+    for(i=0; i<numProcesses; i++){
+        printf("Creating Process thread %d \n",i);
+        status = pthread_create(&processes[i],NULL,processSimulator,i);
+        if(status>0){
+            printf("Error creating process thread %d\n",i);
         }
     }
 
-    debug(max,numProcesses,numResourceType);
-
-    
+    while(1);
+    */
     freedom(0);
     return 0;
 }
 
+void *processSimulator(int pid){
+    int *req;
+    int result;
+    while(1){
+        req = (int*) malloc(sizeof(int)*numResourceType);
+        if(req==NULL){
+            printf("ERROR: fiald to allocate memory for request vector\n");
+            freedom(-1);
+        }
+        //TODO: probs encapsulate in mutex
+        for(int i=0; i<numResourceType; i++){
+            req[i]= rand()%(need[pid][i]+1); //range from 0 to need inclusive
+        }
+
+        result = bankers(req, pid);
+        if(result==0){ //step4.
+            sleep(3);
+        } else{ //step6 
+            //process blocks until another process finishes and relinquishes its resources
+
+        }
+    }
+
+
+}
+
+int bankers(int *req, int pid){
+    for(int i=0; i<numResourceType; i++){
+        if(req[i] > need[pid][i]){ //sanity check
+            printf("Error: requested ammount: %d, of resource: %d, exceeds need: %d \n",req[i],i,need[pid][i]);
+            return -1;
+        }
+
+    }
+}
 
 void free2DArr(int **arr){ //HELPER
     if(arr!=NULL){
@@ -82,31 +149,34 @@ void freedom(int stat){ //HELPER: called either when program fails or exits, use
     
     exit(stat); //0 = success, else fail
 }
-void allocate2DArr(int **arr, int rows, int cols) {//TODO: delete if not needed
+void allocate2DArr(int ***arr, int rows, int cols, int type) {//TODO: delete if not needed
 
  //allocate base ptr;
-    arr = (int **) malloc(sizeof(int*)*rows);
-    if(arr==NULL){
+    *arr = (int **) malloc(sizeof(int*)*rows);
+    if(*arr==NULL){
         printf("ERROR: failed to allocate memory for 2D vector\n");
         freedom(-1); 
-        return -1;
     }
     //allocate second layer of pointers
     for(int i=0; i<rows; i++){
-        arr[i] = (int *) malloc(sizeof(int)*cols);
-        if(arr[i]==NULL){
+        if(type==0){ //calloc
+            (*arr)[i] = (int *) calloc(cols,sizeof(int));    
+        }else{
+            (*arr)[i] = (int *) malloc(sizeof(int)*cols);
+        }
+        if((*arr)[i]==NULL){
             printf("ERROR: failed to allocate memory for max vector\n");
             freedom(-1);
-            return -1;
         }
     }
 }
 
 void prettyPrint(int **arr, int rows, int cols){
     for(int i = 0; i<rows; i++){
-    printf("Process %d : \n",i);
+        printf("Process %d : \n",i);
         for(int j=0; j<cols; j++){
             printf("\t Max # requests for Resource %d : %d",j,arr[i][j]);
         }
+        printf("\n");
     }
 }
