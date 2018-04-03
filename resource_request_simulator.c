@@ -1,10 +1,17 @@
 #include <stdio.h>  //for printf and scanf
 #include <stdlib.h> //for malloc
 
+#ifdef DEBUG
+    #define debug(x,y,z); prettyPrint(x,y,z);
+#else
+   #define debug(x,y,z); /* Nothing here indicates it's compiled out */
+#endif
+
 //FORWARD Declaration
 void free2DArr(int **arr);
 void freedom(int stat);
 void allocate2DArr(int **arr, int rows, int cols);
+void prettyPrint(int **arr, int rows, int cols); //debugger helper
 
 //GLOBAL vars. 
 int numProcesses, numResourceType; //NOTE: NOT TOTAL NUM RESOURCES, BUT NUM RESOURCE TYPE?
@@ -35,9 +42,22 @@ int main()
         scanf("%d", &avail[i]);
     }
    
-    //initialize max array
+    //Allocate max array
     allocate2DArr(max,numProcesses,numResourceType);
+    
+    //Initialize max array
+    printf("For each process, enter the maximum amount claims allowed per resource type\n");
+    for(i = 0; i<numProcesses; i++){
+        printf("Process %d : \n",i);
+        for(j=0; j<numResourceType; j++){
+            printf("\t Max # requests for Resource %d : ",j);
+            scanf("%d", &max[i][j]);
+        }
+    }
 
+    debug(max,numProcesses,numResourceType);
+
+    
     freedom(0);
     return 0;
 }
@@ -78,6 +98,15 @@ void allocate2DArr(int **arr, int rows, int cols) {//TODO: delete if not needed
             printf("ERROR: failed to allocate memory for max vector\n");
             freedom(-1);
             return -1;
+        }
+    }
+}
+
+void prettyPrint(int **arr, int rows, int cols){
+    for(int i = 0; i<rows; i++){
+    printf("Process %d : \n",i);
+        for(int j=0; j<cols; j++){
+            printf("\t Max # requests for Resource %d : %d",j,arr[i][j]);
         }
     }
 }
