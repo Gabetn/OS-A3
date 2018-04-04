@@ -5,6 +5,7 @@
 1. **Default direction**
 Scan has been updated to move in direction of which half of the disk the start sector is. E.g. if start is in Left (_i.e._ < Max-Min/2) move left. 
 **However** cscan I'm by default moving to the right (up) regardless if all blocks are initially before me. _if_ i update it to choose initial direction should it still jump to opposite end. or always jump to 0?
+Ans: by default go in direction of the half in
 
 2. **Possible INput values**
 Do we need to deal with input validation (_e.g._ sector > max) _and_ do we also need to deal with inputs equal to start or max or min. I.e. do we need to worry about double counting?
@@ -19,6 +20,9 @@ Do we need to deal with input validation (_e.g._ sector > max) _and_ do we also 
 2. **Allocation**
     Do we allocate as we go in the bankers for loop. e.g. if the first request is safe for process 1, do we allocate it immediately then check for resource 2? or do we only allocate all resources when we know all requests will be safe?   
         if _Yes_: Then how do we deal with thread synchronization? would all other threads have to wait until bankers algorithm is done on one process, at which point we shouldn't be using threads.  
+    
+    Global shared variable. 
+    entire bankers algorithm protected by mutex. 
 
 3. **Protection**
     How many semaphores and mutex do i need?
