@@ -113,19 +113,19 @@ void accessSCAN(int *request, int numRequest)
     qsort(request, numRequest, sizeof(int), &cmpfunc);
     int loc, start;
     int dir=1; //dir will be direction in which scan travels 1=right
+    if( START<((HIGH-LOW)/2) ){ //if start on lhs
+        dir = -1;
+    }
     for(int i=0; i<numRequest; i++){
         if(request[i] >= START){
             loc = i;
-            if( START<((HIGH-LOW)/2) ){ //if start on lhs
-                dir = -1;
-                if(request[i] > START)
-                    loc--;
-            }
+            if(request[i] > START && dir==-1)
+                loc--;
             break;
         }
         else if(i==numRequest-1){ //if start greater than all requests
-            loc=numRequest-1;
-            dir = -1;
+            loc=numRequest;
+            //dir = -1;
         }
             
     }
@@ -133,10 +133,10 @@ void accessSCAN(int *request, int numRequest)
     
     int inCtr = 0, outCtr = 0, newCnt=numRequest;
     
-    while(inCtr < numRequest){ //TODO: should this switch dir or always right
+    while(inCtr < numRequest){ 
         
         if(loc == numRequest){ //if need to turn around;
-            if(output[outCtr-1]!= HIGH){ //jump to high. 
+            if(dir==1){ //jump to high. 
                 output = (int *) realloc(output, sizeof(int)); //add extra space
                 output[outCtr] = HIGH;
                 outCtr++;
@@ -147,7 +147,7 @@ void accessSCAN(int *request, int numRequest)
 
         }
         else if(loc == -1){
-            if(output[outCtr-1]!= LOW){ //jump to low. 
+            if(dir==-1){ //jump to low. 
                 output = (int *) realloc(output, sizeof(int)); //add extra space
                 output[outCtr] = LOW;
                 outCtr++;
@@ -232,16 +232,22 @@ void accessLOOK(int *request, int numRequest)
     
     qsort(request, numRequest, sizeof(int), &cmpfunc);
     int loc, start;
+    int dir = 1; //dir will be direction in which scan travels 1=right
+    if( START<((HIGH-LOW)/2) ){ //if start on lhs
+        dir = -1;
+    }
     for(int i=0; i<numRequest; i++){
         if(request[i] >= START){
             loc = i;
+            if(request[i] > START && dir==-1)
+                loc--;
             break;
         }
         else if(i==numRequest-1)
             loc=numRequest;
     }
     start=loc;
-    int dir = 1; //dir will be direction in which scan travels 1=right
+
     int inCtr = 0, outCtr = 0;
     while(inCtr < numRequest){ //TODO: should this switch dir or always right
         if(loc<0)
@@ -252,6 +258,10 @@ void accessLOOK(int *request, int numRequest)
             loc = start-1;
             if(loc<0)
                 printf("Error invalid location\n");
+        }
+        else if(loc == -1){
+            dir = 1;
+            loc = start+1;
         }
         else{
             output[outCtr] = request[loc];
