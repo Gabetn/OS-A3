@@ -3,7 +3,7 @@
 
 #define LOW 0
 #define HIGH 199
-#define START 53
+#define START 153
 
 //compare function for qsort
 //you might have to sort the request array
@@ -126,8 +126,7 @@ void accessSCAN(int *request, int numRequest)
         else if(i==numRequest-1){ //if start greater than all requests
             loc=numRequest;
             //dir = -1;
-        }
-            
+        }    
     }
     start=loc;
     
@@ -178,42 +177,53 @@ void accessCSCAN(int *request, int numRequest)
     printf("CSCAN :");
 
     qsort(request, numRequest, sizeof(int), &cmpfunc);
-    int loc;
+    int loc, start;
+    int dir=1; //dir will be direction in which scan travels 1=right
+    if( START<((HIGH-LOW)/2) ){ //if start on lhs
+        dir = -1;
+    }
     for(int i=0; i<numRequest; i++){
         if(request[i] >= START){
             loc = i;
+            if(request[i] > START && dir==-1)
+                loc--;
             break;
         }
-        else if(i==numRequest-1)
+        else if(i==numRequest-1){ //if start greater than all requests
             loc=numRequest;
+            if(dir == -1)
+                loc--;
+        }    
     }
+    start=loc;
     int inCtr = 0, outCtr = 0, newCnt=numRequest;
     while(inCtr < numRequest){ //TODO: should this switch dir or always right
-        if(loc == numRequest){ //if need to loop to 0; 
-            if(output[outCtr-1]!= HIGH){
-                output = (int *) realloc(output, sizeof(int)); //add extra space
-                output[outCtr] = HIGH;
-                outCtr++;
-                newCnt++;
-            }
-            loc = 0; 
-            output[outCtr] = 0;
-            outCtr++;
-            
-            //If you loop back to 0 and request for 0 is queued next, don't repeat
-            if(request[loc] == 0){
-                loc++;
-                inCtr++;
-            }else{
-                output = (int *) realloc(output, sizeof(int)); //add extra space
-                newCnt++;
-            }
-
+       
+        if(loc == numRequest && dir==1){ //if need to loop to 0; 
+            output = (int *) realloc(output, sizeof(int)*2); //add extra space
+            output[outCtr] = HIGH;
+            output[outCtr+1] = LOW;
+            loc = 0;
+            /*else{ //happens if first input is above all others
+                // output[outCtr] = LOW; //outs 0
+                // output[outCtr+1] = HIGH;
+                loc = numRequest-1;
+            }*/
+            outCtr+=2;
+            newCnt+=2;
+        }
+        else if(loc == -1 && dir==-1){
+            output = (int *) realloc(output, sizeof(int)*2); //add extra space
+            output[outCtr] = LOW;
+            output[outCtr+1] = HIGH;
+            loc = numRequest-1;
+            outCtr+=2;
+            newCnt+=2;
         }
         else{
             output[outCtr] = request[loc];
             inCtr++;
-            loc++;
+            loc+=dir;
             outCtr++;
         }
     }
@@ -284,40 +294,54 @@ void accessCLOOK(int *request, int numRequest)
     printf("CLOOK :");
 
     qsort(request, numRequest, sizeof(int), &cmpfunc);
-    int loc;
+    int loc, start;
+    int dir=1; //dir will be direction in which scan travels 1=right
+    if( START<((HIGH-LOW)/2) ){ //if start on lhs
+        dir = -1;
+    }
     for(int i=0; i<numRequest; i++){
         if(request[i] >= START){
             loc = i;
+            if(request[i] > START && dir==-1)
+                loc--;
             break;
         }
-        else if(i==numRequest-1)
+        else if(i==numRequest-1){ //if start greater than all requests
             loc=numRequest;
+            if(dir == -1)
+                loc--;
+        }    
     }
+    start=loc;
     int inCtr = 0, outCtr = 0, newCnt=numRequest;
     while(inCtr < numRequest){ //TODO: should this switch dir or always right
-        if(loc == numRequest){ //if need to loop to 0; 
-            loc = 0; 
-            output[outCtr] = 0;
+       
+        if(loc == numRequest && dir==1){ //if need to loop to 0; 
+            output = (int *) realloc(output, sizeof(int)); //add extra space
+            output[outCtr] = LOW;
+            loc = 0;
+            /*else{ //happens if first input is above all others
+                // output[outCtr] = LOW; //outs 0
+                // output[outCtr+1] = HIGH;
+                loc = numRequest-1;
+            }*/
             outCtr++;
-            
-            //If you loop back to 0 and request for 0 is queued next, don't repeat
-            if(request[loc] == 0){
-                loc++;
-                inCtr++;
-            }else{
-                output = (int *) realloc(output, sizeof(int)); //add extra space
-                newCnt++;
-            }
-
+            newCnt++;
+        }
+        else if(loc == -1 && dir==-1){
+            output = (int *) realloc(output, sizeof(int)); //add extra space
+            output[outCtr] = HIGH;
+            loc = numRequest-1;
+            outCtr++;
+            newCnt++;
         }
         else{
             output[outCtr] = request[loc];
             inCtr++;
-            loc++;
+            loc+=dir;
             outCtr++;
         }
     }
-
     printSeqNPerformance(output,newCnt);
     printf("----------------\n");
     return;
