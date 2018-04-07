@@ -30,8 +30,8 @@ int *avail, **max; //QUESTION: is maxClaimResPerProcess a global value
 int **need, **hold;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-sem_t full;
-sem_t empty;
+//sem_t full;
+//sem_t empty;
 
 int main()
 {

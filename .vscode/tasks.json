@@ -4,6 +4,6 @@
     "version": "2.0.0",
     "command": "gcc",
     "isShellCommand": true,
-    "args": ["-g","part2_skeleton.c"],
+    "args": ["-g","resource_request_simulator.c"],
     "showOutput": "always"
 }
