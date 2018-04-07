@@ -32,6 +32,22 @@ Do we need to deal with input validation (_e.g._ sector > max) _and_ do we also 
 3. **Protection**
     How many semaphores and mutex do i need?
 
-4. **General**
+4. **General** -- To be answered
     if only reading from a global variable on multiple threads, is having it unprotected safe? Since i'm not changing it there shouldn't be any issue right?
         Note: if not pass _numResourceTypes_ locally via method calls. 
+
+
+
+
+
+
+
+    -------------------
+    ###BANK###
+    DO we allocate for all resources in the request at once or on a resource-by-resource basis?
+    
+    If all at once: if one of them fails, do we not grant any? 
+        **_And_** if do we completely discard that request, or do we come back to it after sleeping?
+
+    If one at a time: what if one of them fails, do we grant the one's that didnt.
+     

@@ -14,6 +14,7 @@
 
 //FORWARD Declaration
 void *processSimulator(int pid);
+int requestSimulator(int pid, int* req);
 int bankers(int *req, int pid);
 int isSafe();
 void free2DArr(int **arr);
@@ -76,50 +77,70 @@ int main()
     printf("HOLD:\n");
     debug(hold,numProcesses,numResourceType);
     
-    /*pthread_t processes[numProcesses];
-    sem_init(&full, 0, 0);
-    sem_init(&empty, 0, 99);
+    pthread_t processes[numProcesses];
+    /*sem_init(&full, 0, 0);
+    sem_init(&empty, 0, 99);*/
     
     int status;
     for(i=0; i<numProcesses; i++){
         printf("Creating Process thread %d \n",i);
         status = pthread_create(&processes[i],NULL,processSimulator,i);
-        if(status>0){
+        if(status!=0){
             printf("Error creating process thread %d\n",i);
         }
     }
+    for(i=0; i<numProcesses; i++){//wait for all processes to complete
+        pthread_join(processes[i],NULL); 
+    }
+    //while(1);
+    
 
-    while(1);
-    */
     freedom(0);
     return 0;
 }
 
-void *processSimulator(int pid){
+
+
+int *processSimulator(int pid){ //NOTE: all should be protected sinceneed can't even be 
     int *req;
     int result;
-    while(1){
-        req = (int*) malloc(sizeof(int)*numResourceType);
-        if(req==NULL){
-            printf("ERROR: fiald to allocate memory for request vector\n");
-            freedom(-1);
-        }
-        //TODO: probs encapsulate in mutex
-        for(int i=0; i<numResourceType; i++){
-            req[i]= rand()%(need[pid][i]+1); //range from 0 to need inclusive
-        }
-
-        result = bankers(req, pid);
-        if(result==0){ //step4.
-            sleep(3);
-        } else{ //step6 
-            //process blocks until another process finishes and relinquishes its resources
-
-        }
+    req = (int*) malloc(sizeof(int)*numResourceType);
+    if(req==NULL){ //TODO: ABORT, not end entire program. 
+        printf("ERROR: failed to allocate memory for request vector\n");
+        return;
+        //freedom(-1);
+    }
+    
+    //while(1){
+    for(int j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+        req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
+        if(req[j]>need[pid][j]){
+            printf("Sanity Check: Cannot request more than needed\n");
+            return -1;
+        } //NOTE: unnecessary check
     }
 
+    while(1){
+        pthread_mutex_lock(&mutex);
+        result = bankers();
+        pthread_mutex_unlock(&mutex);
+        if(result==-1){
+            printf("Allocation is not safe, cancelling\n");
+            return -1;
+        }else if(result==-2){
+            usleep(1000); //1 milis.
+        }else if(result==1){
+            printf("System is safe : allocating\n");
+            return 1;
+            //sleep(3);
+        }
+    }
+    
 
+    return 0;
 }
+
+
 
 int bankers(int *req, int pid){
     for(int i=0; i<numResourceType; i++){ //TODO: change to j
@@ -130,23 +151,77 @@ int bankers(int *req, int pid){
         if(req[i] > avail[i]){
             printf("Not enough of resource %d available, waiting\n",i);
             //TODO: waiting code. 
-            bankers(req,pid); //NOTE: this creates a busy waiting loop.
+            return -2;
+           // bankers(req,pid); //NOTE: this creates a busy waiting loop.
         }
-        //Provisional Allocation
-        if(isSafe()==0){
-
-        }else{//cancel allocation
-            //NOTE: how does provisional allocation work. 
-            bankers(req, pid);
-        }
-
     }
+    //Provisional Allocation
+   
+    if( requestSimulator(pid,req) ){
+        return 1;
+    }else{//cancel allocation
+        //NOTE: how does provisional allocation work. 
+        bankers(req, pid);
+    }
+
+    /*while(1){
+        //TODO: probs encapsulate in mutex
+        if( req[j] > avail[j] ) //busy wait 
+            continue;
+
+        requestSimulator(pid,req); //NOTE: &req?
+
+        result = bankers(req, pid); 
+        if(result==0){ //step4.
+            sleep(3);
+        } else{ //step6 
+            //process blocks until another process finishes and relinquishes its resources
+
+        }
+    }*/
+
     return(0);
 }
 
-int isSafe(){
 
-    return -1;
+
+int requestSimulator(int pid, int* req){ //NOTE: is this step 3? Provisional Alloc.
+    for(int j=0; j<numResourceType; j++){
+        avail[j]=avail[j]-req[j];
+        hold[pid][j] = hold[pid][j]-req[j];
+        need[pid][j] = need[pid][j]-req[j]; 
+    }
+    if(isSafe()){ //Then grant resources.
+
+        return 1;
+    } else{ // Go to step 1. 
+
+    }
+}
+
+
+
+
+int isSafe(){
+    int isSafe = 0;
+    int work[numResourceType];
+    int finish[numProcesses];
+    int i,j;
+    for(i=0; i<numProcesses; i++){
+        finish[i] = 0;
+    }
+    for(j=0; j<numResourceType; j++){
+        work[i] = avail[i];
+    }
+    for(j=0; j<numResourceType; j++){//loop through all resources
+        for(i=0; i<numProcesses; i++){
+            if(finish[i]==0 && need[i][j] <= work[j]){
+                work[j] = work[j]+hold[i][j];
+            }
+        }
+    }
+  
+    return isSafe;
 }
 
 void free2DArr(int **arr){ //HELPER
