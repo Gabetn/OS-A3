@@ -128,13 +128,13 @@ void *processSimulator(int pid){ //NOTE: all should be protected sinceneed can't
                 for(j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
                     req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
                 } 
-            case -2:
+            case -2: //if not safe 
                 printf("Not enough resources available. Try again.\n");
                 pthread_mutex_unlock(&mutex); //NOTE: REMOVE THIS
                 usleep(1000); //1 milis. NOTE: is this necessary?
                 continue;
             case 1:
-                printf("System is safe : allocating\n");//note allocation in bankers
+                printf("System is safe : allocated request\n");//note allocation in bankers
                 result=0;
                 for(j=0; j<numResourceType; j++){
                     if(need[pid][j]>0) //if still need a resource
@@ -177,13 +177,14 @@ int bankers(int *req, int pid){
             return -2;
         }
     }
-    
+    int retval = requestSimulator(pid,req);
     //Provisional Allocation
-    if( requestSimulator(pid,req) ){ //if safe. apply changes
+    if( retval == 1 ){ //if valid request. 
         return 1;
     }else{//cancel allocation
         //NOTE: how does provisional allocation work. 
-        bankers(req, pid);
+        //bankers(req, pid);
+        return retval; //retval == -2
     }
 
     /*while(1){
@@ -210,14 +211,19 @@ int bankers(int *req, int pid){
 int requestSimulator(int pid, int* req){ //NOTE: is this step 3? Provisional Alloc.
     for(int j=0; j<numResourceType; j++){
         avail[j]=avail[j]-req[j];
-        hold[pid][j] = hold[pid][j]-req[j];
+        hold[pid][j] = hold[pid][j]+req[j];
         need[pid][j] = need[pid][j]-req[j]; 
     }
     if(isSafe()){ //Then grant resources.
-
-        return 1;
-    } else{ // Go to step 1. 
-
+        return 1; //don't undo provisional allocation, thus granting resources
+    } else{ // not safe: Go to step 1. 
+        //undo provisional allocation
+        for(int j=0; j<numResourceType; j++){ 
+            avail[j]=avail[j]-req[j];
+            hold[pid][j] = hold[pid][j]+req[j];
+            need[pid][j] = need[pid][j]-req[j]; 
+        }
+        return -2;
     }
 }
 
