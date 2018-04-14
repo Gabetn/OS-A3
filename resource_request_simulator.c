@@ -16,7 +16,7 @@
 void *processSimulator(int pid);
 int requestSimulator(int pid, int* req);
 int bankers(int *req, int pid);
-int isSafe();
+int isSafe(int pid);
 void free2DArr(int **arr);
 void freedom(int stat);
 void allocate2DArr(int ***arr, int rows, int cols, int type);
@@ -146,7 +146,7 @@ void *processSimulator(int pid){ //NOTE: all should be protected sinceneed can't
                         avail[j] += hold[pid][j]; 
                         need[pid][j] = 0;
                         hold[pid][j] = 0;
-                        max[pid][j] = 0;
+                        max[pid][j] = 0; //NOTE: is this necessary?
                     }
                     pthread_mutex_unlock(&mutex);
                     return;
@@ -214,14 +214,14 @@ int requestSimulator(int pid, int* req){ //NOTE: is this step 3? Provisional All
         hold[pid][j] = hold[pid][j]+req[j];
         need[pid][j] = need[pid][j]-req[j]; 
     }
-    if(isSafe()){ //Then grant resources.
+    if(isSafe(pid)==0){ //Then grant resources.
         return 1; //don't undo provisional allocation, thus granting resources
     } else{ // not safe: Go to step 1. 
         //undo provisional allocation
         for(int j=0; j<numResourceType; j++){ 
-            avail[j]=avail[j]-req[j];
-            hold[pid][j] = hold[pid][j]+req[j];
-            need[pid][j] = need[pid][j]-req[j]; 
+            avail[j]=avail[j]+req[j];
+            hold[pid][j] = hold[pid][j]-req[j];
+            need[pid][j] = need[pid][j]+req[j]; 
         }
         return -2;
     }
@@ -230,26 +230,56 @@ int requestSimulator(int pid, int* req){ //NOTE: is this step 3? Provisional All
 
 
 
-int isSafe(){
-    int isSafe = 0;
-    int work[numResourceType];
-    int finish[numProcesses];
+int isSafe(int pid){
+    int work[numResourceType]; //TEMP avail vector
+    int finish[numProcesses];   //TEMP
     int i,j;
+    /* Step 1: INITIALIZE */
+    for(j=0; j<numResourceType; j++){
+        work[j] = avail[j];
+    }
     for(i=0; i<numProcesses; i++){
         finish[i] = 0;
     }
-    for(j=0; j<numResourceType; j++){
-        work[i] = avail[i];
-    }
-    for(j=0; j<numResourceType; j++){//loop through all resources
-        for(i=0; i<numProcesses; i++){
-            if(finish[i]==0 && need[i][j] <= work[j]){
-                work[j] = work[j]+hold[i][j];
+
+    /* Step 2: */
+    int flag=0; flag2=0;
+    i=0;
+    while(i<numProcesses){ //each process
+        if(finish[i]==0){ //if not done
+        /*check if given prov. alloc. can ALL resources required
+            be allocated to curr pros given the new availability (work)? */
+            //flag=0;
+            for(j=0; j<numResourceType; j++){ 
+                if(need[i][j] > work[j]){ //if can't get all of its needed.
+                    flag = 1;
+                    break;
+                }
+                else if(j == numResourceType-1)
+                    flag = 0;
+            }
+
+            /*STEP 3: Release Resource*/
+            if(flag ==0){ //the process needs less than the new available resource for all resources
+                finish[i]=1;
+                for(j=0; j<numResourceType; j++){
+                    work[j] = work[j] + hold[i][j];
+                }
+                i=0; //reset counter
+                continue;
             }
         }
+
+        i++;
     }
-  
-    return isSafe;
+    
+    for(i=0; i<numProcesses; i++){
+        if(finish[i]==0){
+            printf("Allocation is not safe\n");
+            return -1; //not safe
+        }
+    }
+    return 0;
 }
 
 void free2DArr(int **arr){ //HELPER
