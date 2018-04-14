@@ -90,7 +90,7 @@ int main()
         }
     }
     for(i=0; i<numProcesses; i++){//wait for all processes to complete
-        pthread_join(processes[i],NULL); 
+        pthread_join(processes[i],NULL); //NOTE: if not NUll retval can get back the error codes
     }
     //while(1);
     
@@ -101,43 +101,67 @@ int main()
 
 
 
-int *processSimulator(int pid){ //NOTE: all should be protected sinceneed can't even be 
+void *processSimulator(int pid){ //NOTE: all should be protected sinceneed can't even be 
     int *req;
-    int result;
+    int result,j;
     req = (int*) malloc(sizeof(int)*numResourceType);
     if(req==NULL){ //TODO: ABORT, not end entire program. 
-        printf("ERROR: failed to allocate memory for request vector\n");
+        printf("ERROR: failed to allocate memory for PID's: %d request vector\n",pid);
         return;
         //freedom(-1);
     }
-    
-    //while(1){
-    for(int j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+    for(j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
         req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
-        if(req[j]>need[pid][j]){
-            printf("Sanity Check: Cannot request more than needed\n");
-            return -1;
-        } //NOTE: unnecessary check
-    }
-
+    } 
     while(1){
         pthread_mutex_lock(&mutex);
-        result = bankers();
-        pthread_mutex_unlock(&mutex);
-        if(result==-1){
-            printf("Allocation is not safe, cancelling\n");
-            return -1;
-        }else if(result==-2){
-            usleep(1000); //1 milis.
-        }else if(result==1){
-            printf("System is safe : allocating\n");
-            return 1;
+        /*for(j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+            req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
+        }*/
+
+    //while(1){
+        
+        result = bankers(req, pid);
+        switch(result){
+            case -1:
+                printf("Invalid request, try again\n");
+                for(j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+                    req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
+                } 
+            case -2:
+                printf("Not enough resources available. Try again.\n");
+                pthread_mutex_unlock(&mutex); //NOTE: REMOVE THIS
+                usleep(1000); //1 milis. NOTE: is this necessary?
+                continue;
+            case 1:
+                printf("System is safe : allocating\n");//note allocation in bankers
+                result=0;
+                for(j=0; j<numResourceType; j++){
+                    if(need[pid][j]>0) //if still need a resource
+                        result=1;
+                }
+                if(result==0){ //dont need any more resources
+                    printf("PID: %d has completed allocation\n",pid);
+                    for(j=0; j<numResourceType; j++){ //release each resource
+                        avail[j] += hold[pid][j]; 
+                        need[pid][j] = 0;
+                        hold[pid][j] = 0;
+                        max[pid][j] = 0;
+                    }
+                    pthread_mutex_unlock(&mutex);
+                    return;
+                }else if(result == 1){//still need resources
+                    pthread_mutex_unlock(&mutex); //NOTE: is this necessary. 
+                    sleep(3);
+                    continue;
+                }
             //sleep(3);
         }
+        pthread_mutex_unlock(&mutex);
     }
     
 
-    return 0;
+    return;
 }
 
 
@@ -150,14 +174,12 @@ int bankers(int *req, int pid){
         }
         if(req[i] > avail[i]){
             printf("Not enough of resource %d available, waiting\n",i);
-            //TODO: waiting code. 
             return -2;
-           // bankers(req,pid); //NOTE: this creates a busy waiting loop.
         }
     }
+    
     //Provisional Allocation
-   
-    if( requestSimulator(pid,req) ){
+    if( requestSimulator(pid,req) ){ //if safe. apply changes
         return 1;
     }else{//cancel allocation
         //NOTE: how does provisional allocation work. 
