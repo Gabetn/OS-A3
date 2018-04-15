@@ -17,8 +17,6 @@
 #endif
 
 //FORWARD Declaration
-void *faultSimulator();
-void* deadlockChecker();
 void *processSimulator(void *pid);
 void requestor(int pid, int *req);
 int requestSimulator(int pid, int* req);
@@ -84,7 +82,7 @@ int main()
     printf("HOLD:\n");
     debug(hold,numProcesses,numResourceType);
     
-    pthread_t processes[numProcesses+2];
+    pthread_t processes[numProcesses];
     /*sem_init(&full, 0, 0);
     sem_init(&empty, 0, 99);*/
     
@@ -96,15 +94,6 @@ int main()
             printf("Error creating process thread %d\n",i);
         }
     }
-    int tmp = numProcesses;
-    status = pthread_create(&processes[numProcesses],NULL,faultSimulator,NULL);
-    if(status!=0){
-        printf("Error creating fault_thread\n");
-    }
-    status = pthread_create(&processes[numProcesses+1],NULL,deadlockChecker,NULL);
-    if(status!=0){
-        printf("Error creating fault_thread\n");
-    }
     for(i=0; i<numProcesses; i++){//wait for all processes to complete
         pthread_join(processes[i],NULL); //NOTE: if not NUll retval can get back the error codes
     }
@@ -113,46 +102,6 @@ int main()
 
     freedom(0);
     return 0;
-}
-
-void *faultSimulator(){
-    //int pid = *(int *)pid; //NOTE: not necessary
-    while(1){ //HOW to deal with the infinite loop? how to check when processes finish
-        int rando = rand()%numResourceType+1;
-        
-        pthread_mutex_lock(&mutex);
-        avail[rando] -= 1;
-        pthread_mutex_unlock(&mutex);
-        
-        sleep(10);
-    }
-    return NULL;
-}
-
-void *deadlock_checker(){
-    int flag;
-    while(1){
-        flag=0;
-        pthread_mutex_lock(&mutex);
-        for(int i=0; i<numProcesses; i++){
-            for(int j=0; j<numResourceType; j++){ 
-                if(need[i][j] > avail[j]){ //if can't get all of its needed.
-                    flag = 1;
-                    break;
-                }
-            }
-            if(flag==0)
-                break;
-            if(i=numProcesses-1){ //if made it to the end and no process had all needs less than avail
-                printf("Deadlock will occur as processes request more resources, exiting...\n");
-                freedom(-1);
-            }
-        }
-        pthread_mutex_unlock(&mutex);
-
-        sleep(10);
-    }
-    return NULL;
 }
 
 void requestor(int pid, int *req){
