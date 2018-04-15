@@ -14,6 +14,7 @@
 
 //FORWARD Declaration
 void *processSimulator(void *pid);
+void requestor(int pid, int *req);
 int requestSimulator(int pid, int* req);
 int bankers(int *req, int pid);
 int isSafe(int pid);
@@ -99,7 +100,15 @@ int main()
     return 0;
 }
 
-
+void requestor(int pid, int *req){
+    for(int j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+        if(need[pid][j]>0){
+            req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
+        }else{
+            req[j]=0; //NOTE: x%0 is undefined
+        }
+    } 
+}
 
 void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed can't even be 
     int pid = *(int*)pidl;
@@ -112,13 +121,7 @@ void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed ca
         //freedom(-1);
     }
     
-    for(j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
-        if(need[pid][j]>0){
-            req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
-        }else{
-            req[j]=0; //NOTE: x%0 is undefined
-        }
-    } 
+    requestor(pid, req);
     
     while(1){
         pthread_mutex_lock(&mutex);
@@ -134,10 +137,9 @@ void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed ca
         switch(result){
             case -1:
                 printf("Invalid request, try again\n");
-                //TODO: COMMENT OUT
+                requestor(pid, req);
                 break; 
             case -2: //if not safe 
-                printf("PID: %d Not enough resources available. Try again.\n",pid);
                 pthread_mutex_unlock(&mutex); //NOTE: REMOVE THIS
                 //usleep(1000); //1 milis. NOTE: is this necessary?
                 sleep(1);
@@ -145,6 +147,7 @@ void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed ca
             case 1:
                 printf("PID: %d System is safe : allocated request\n",pid);//note allocation in bankers
                 result=0;
+                //debug(hold,numProcesses,numResourceType);
                 for(j=0; j<numResourceType; j++){
                     if(need[pid][j]>0) //if still need a resource
                         result=1;
@@ -157,10 +160,11 @@ void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed ca
                         hold[pid][j] = 0;
                         max[pid][j] = 0; //NOTE: is this necessary?
                     }
-                    pthread_mutex_unlock(&mutex);
                     free(req);
+                    pthread_mutex_unlock(&mutex);
                     return NULL;
                 }else if(result == 1){//still need resources
+                    requestor(pid, req);//generate new request vals, but service after sleep
                     pthread_mutex_unlock(&mutex); //NOTE: is this necessary. 
                     sleep(3);
                     continue;
@@ -285,7 +289,7 @@ int isSafe(int pid){
     
     for(i=0; i<numProcesses; i++){
         if(finish[i]==0){
-            printf("Allocation is not safe\n");
+            printf("Allocation is not safe. Try again\n");
             return -1; //not safe
         }
     }
