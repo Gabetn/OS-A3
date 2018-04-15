@@ -37,8 +37,6 @@ int *avail, **max; //QUESTION: is maxClaimResPerProcess a global value
 int **need, **hold;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-//sem_t full;
-//sem_t empty;
 
 int main()
 {
@@ -83,9 +81,7 @@ int main()
     printf("HOLD:\n");
     debug(hold,numProcesses,numResourceType);
     
-    pthread_t processes[numProcesses+2];
-    /*sem_init(&full, 0, 0);
-    sem_init(&empty, 0, 99);*/
+    pthread_t processes[numProcesses+2]; //+2 for faulty & deadlock checker
     
     int status;
     for(i=0; i<numProcesses; i++){
@@ -105,10 +101,8 @@ int main()
         printf("Error creating fault_thread\n");
     }
     for(i=0; i<numProcesses; i++){//wait for all processes to complete
-        pthread_join(processes[i],NULL); //NOTE: if not NUll retval can get back the error codes
+        pthread_join(processes[i],NULL);  //No need to wait for the fault/deadlock checker thread
     }
-    //while(1);
-    
 
     freedom(0);
     return 0;
@@ -116,11 +110,12 @@ int main()
 
 void *faultSimulator(){
     //int pid = *(int *)pid; //NOTE: not necessary
-    while(1){ //HOW to deal with the infinite loop? how to check when processes finish
+    while(1){ //Infinite loop exits when either deadlock occurs or all processes serviced. 
         int fault = rand()%numResourceType; //from 0 to numRT exclusive since array indexing
         
         pthread_mutex_lock(&mutex);
-        avail[fault] -= 1;
+        if(avail[fault]>0)
+            avail[fault] -= 1;
         pthread_mutex_unlock(&mutex);
         
         sleep(10);
@@ -140,7 +135,7 @@ void *deadlock_checker(){
                     break;
                 }
             }
-            if(flag==0)
+            if(flag==0) //process with all of resources needs <= avail
                 break;
             if(i=numProcesses-1){ //if made it to the end and no process had all needs less than avail
                 printf("Deadlock will occur as processes request more resources, exiting...\n");
@@ -154,52 +149,54 @@ void *deadlock_checker(){
     return NULL;
 }
 
+/* HELPER FUNCTION: to initialize request vectors. */
+//NOTE: is only called from within locked mutex ranges, thus no race conditions. 
 void requestor(int pid, int *req){
-    for(int j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+    for(int j=0; j<numResourceType; j++){
         if(need[pid][j]>0){
-            req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive
+            req[j]= rand()%(need[pid][j]+1); //range from 0 to need inclusive (+1)
         }else{
             req[j]=0; //NOTE: x%0 is undefined
         }
     } 
 }
 
-void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed can't even be 
+void *processSimulator(void *pidl){
     int pid = *(int*)pidl;
     int *req;
     int result,j;
+    
+    //Generate request vector
     req = (int*) malloc(sizeof(int)*numResourceType);
     if(req==NULL){  
         printf("ERROR: failed to allocate memory for PID's: %d request vector\n",pid);
         return NULL;
-        //freedom(-1);
     }
-    
+    //Initialize request vector
     requestor(pid, req);
     
     while(1){
         pthread_mutex_lock(&mutex);
         printf("\n \t Request for PID: %d is:",pid);
-        for(j=0; j<numResourceType; j++){ //NOTE: Should this be the case?
+        for(j=0; j<numResourceType; j++){ 
             printf(" %d ",req[j]);
         }
         printf("\n");
         
-    //while(1){
-        
         result = bankers(req, pid);
+
         switch(result){
-            case -1:
+            case -1: //req > need
                 printf("Invalid request, try again\n");
-                requestor(pid, req);
+                requestor(pid, req); //REINITIALIZE REQUEST VECTOR for next iteration. 
                 break; 
             case -2: //if not safe 
-                pthread_mutex_unlock(&mutex); //NOTE: REMOVE THIS
-                //usleep(1000); //1 milis. NOTE: is this necessary?
-                sleep(1);
+                pthread_mutex_unlock(&mutex); 
+                //usleep(1000); //1 milis. 
+                sleep(1); //used to minimize busy waiting 
                 continue;
             case 1:
-                printf("PID: %d System is safe : allocated request\n",pid);//note allocation in bankers
+                printf("PID: %d System is safe : allocated request\n",pid);//Note: allocation happened in bankers
                 result=0;
                 //debug(hold,numProcesses,numResourceType);
                 for(j=0; j<numResourceType; j++){
@@ -212,18 +209,18 @@ void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed ca
                         avail[j] += hold[pid][j]; 
                         need[pid][j] = 0;
                         hold[pid][j] = 0;
-                        max[pid][j] = 0; //NOTE: is this necessary?
+                        max[pid][j] = 0; 
                     }
                     free(req);
                     pthread_mutex_unlock(&mutex);
                     return NULL;
                 }else if(result == 1){//still need resources
                     requestor(pid, req);//generate new request vals, but service after sleep
-                    pthread_mutex_unlock(&mutex); //NOTE: is this necessary. 
+                    pthread_mutex_unlock(&mutex);
                     sleep(3);
                     continue;
                 }
-            //sleep(3);
+
         }
         pthread_mutex_unlock(&mutex);
     }
@@ -235,48 +232,32 @@ void *processSimulator(void *pidl){ //NOTE: all should be protected sinceneed ca
 
 
 int bankers(int *req, int pid){
-    for(int i=0; i<numResourceType; i++){ //TODO: change to j
-        if(req[i] > need[pid][i]){ //sanity check
-            printf("Error: requested ammount: %d, of resource: %d, exceeds need: %d \n",req[i],i,need[pid][i]);
+    for(int j=0; j<numResourceType; j++){ 
+        /* STEP 1: Verify needs*/
+        if(req[j] > need[pid][j]){ //sanity check
+            printf("Error: requested ammount: %d, of resource: %d, exceeds need: %d \n",req[j],j,need[pid][j]);
             return -1;
         }
-        if(req[i] > avail[i]){
-            printf("PID: %d Not enough of resource %d available, waiting\n",pid,i);
+        /* STEP 2: Verify availability */
+        if(req[j] > avail[j]){
+            printf("PID: %d Not enough of resource %d available, waiting\n",pid,j);
             return -2;
         }
     }
     int retval = requestSimulator(pid,req);
-    //Provisional Allocation
+
     if( retval == 1 ){ //if valid request. 
         return 1;
     }else{//cancel allocation
-        //NOTE: how does provisional allocation work. 
-        //bankers(req, pid);
         return retval; //retval == -2
     }
-
-    /*while(1){
-        //TODO: probs encapsulate in mutex
-        if( req[j] > avail[j] ) //busy wait 
-            continue;
-
-        requestSimulator(pid,req); //NOTE: &req?
-
-        result = bankers(req, pid); 
-        if(result==0){ //step4.
-            sleep(3);
-        } else{ //step6 
-            //process blocks until another process finishes and relinquishes its resources
-
-        }
-    }*/
 
     return(0);
 }
 
 
-
-int requestSimulator(int pid, int* req){ //NOTE: is this step 3? Provisional Alloc.
+/*BANKERS: Step 3 - Provisional Allocation */
+int requestSimulator(int pid, int* req){ 
     for(int j=0; j<numResourceType; j++){
         avail[j]=avail[j]-req[j];
         hold[pid][j] = hold[pid][j]+req[j];
@@ -302,6 +283,7 @@ int isSafe(int pid){
     int work[numResourceType]; //TEMP avail vector
     int finish[numProcesses];   //TEMP
     int i,j;
+
     /* Step 1: INITIALIZE */
     for(j=0; j<numResourceType; j++){
         work[j] = avail[j];
@@ -317,7 +299,6 @@ int isSafe(int pid){
         if(finish[i]==0){ //if not done
         /*check if given prov. alloc. can ALL resources required
             be allocated to curr pros given the new availability (work)? */
-            //flag=0;
             for(j=0; j<numResourceType; j++){ 
                 if(need[i][j] > work[j]){ //if can't get all of its needed.
                     flag = 1;
@@ -330,7 +311,7 @@ int isSafe(int pid){
             /*STEP 3: Release Resource*/
             if(flag ==0){ //the process needs less than the new available resource for all resources
                 finish[i]=1;
-                for(j=0; j<numResourceType; j++){
+                for(j=0; j<numResourceType; j++){ //release what process was holding
                     work[j] = work[j] + hold[i][j];
                 }
                 i=0; //reset counter
@@ -350,7 +331,7 @@ int isSafe(int pid){
     return 0;
 }
 
-void free2DArr(int **arr){ //HELPER
+void free2DArr(int **arr){ //HELPER of freedom(): frees nested arrays 
     if(arr!=NULL){
         for(int i=0; i<numProcesses; i++){
             if(arr[i]!=NULL)
@@ -369,7 +350,7 @@ void freedom(int stat){ //HELPER: called either when program fails or exits, use
     
     exit(stat); //0 = success, else fail
 }
-void allocate2DArr(int ***arr, int rows, int cols, int type) {//TODO: delete if not needed
+void allocate2DArr(int ***arr, int rows, int cols, int type) {
 
  //allocate base ptr;
     *arr = (int **) malloc(sizeof(int*)*rows);
@@ -391,11 +372,11 @@ void allocate2DArr(int ***arr, int rows, int cols, int type) {//TODO: delete if 
     }
 }
 
-void prettyPrint(int **arr, int rows, int cols){
+void prettyPrint(int **arr, int rows, int cols){ //HELPER: called when -DDEBUG flag is raised. used for printing 2d array.
     for(int i = 0; i<rows; i++){
         printf("Process %d : \n",i);
         for(int j=0; j<cols; j++){
-            printf("\t Max # requests for Resource %d : %d",j,arr[i][j]);
+            printf("\t Max/Need/HOLD requests for Resource %d : %d",j,arr[i][j]);
         }
         printf("\n");
     }
