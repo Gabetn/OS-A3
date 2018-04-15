@@ -1,4 +1,4 @@
-/*          ECSE 427 Assignment 3 Question 3 part 1
+/*          ECSE 427 Assignment 3 Question 3 part 2
     Name: Gabriel Negash
     ID: 260679520
 */
@@ -8,7 +8,6 @@
 #include <unistd.h>
 //#include <limits.h>
 #include <semaphore.h>
-
 
 #ifdef DEBUG
     #define debug(x,y,z); prettyPrint(x,y,z);
