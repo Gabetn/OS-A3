@@ -16,8 +16,8 @@
 #endif
 
 //FORWARD Declaration
-void *faultSimulator();
-void* deadlockChecker();
+void *faultSimulator(void *pid);
+void *deadlockChecker(void *pid);
 void *processSimulator(void *pid);
 void requestor(int pid, int *req);
 int requestSimulator(int pid, int* req);
@@ -81,7 +81,9 @@ int main()
     printf("HOLD:\n");
     debug(hold,numProcesses,numResourceType);
     
-    pthread_t processes[numProcesses+2]; //+2 for faulty & deadlock checker
+    int tmp = numProcesses+2;
+    int tmp2 = numProcesses+1;
+    pthread_t processes[tmp]; //+2 for faulty & deadlock checker
     
     int status;
     for(i=0; i<numProcesses; i++){
@@ -91,15 +93,18 @@ int main()
             printf("Error creating process thread %d\n",i);
         }
     }
-    int tmp = numProcesses;
-    status = pthread_create(&processes[numProcesses],NULL,faultSimulator,NULL);
+    tmp=numProcesses;
+    status = pthread_create(&processes[numProcesses],NULL,(void *)faultSimulator,(void *)&tmp);
     if(status!=0){
         printf("Error creating fault_thread\n");
     }
-    status = pthread_create(&processes[numProcesses+1],NULL,deadlockChecker,NULL);
+    
+    status = pthread_create(&processes[numProcesses+1],NULL,deadlockChecker,(void *)&tmp2);
     if(status!=0){
         printf("Error creating fault_thread\n");
     }
+
+
     for(i=0; i<numProcesses; i++){//wait for all processes to complete
         pthread_join(processes[i],NULL);  //No need to wait for the fault/deadlock checker thread
     }
@@ -108,14 +113,21 @@ int main()
     return 0;
 }
 
-void *faultSimulator(){
-    //int pid = *(int *)pid; //NOTE: not necessary
+void *faultSimulator(void *pidl){
+    int pid = *(int *)pidl; //NOTE: not necessary
+    int fault;
     while(1){ //Infinite loop exits when either deadlock occurs or all processes serviced. 
-        int fault = rand()%numResourceType; //from 0 to numRT exclusive since array indexing
+         //from 0 to numRT exclusive since array indexing
         
         pthread_mutex_lock(&mutex);
-        if(avail[fault]>0)
+        fault = rand()%numResourceType;
+        printf("\n \tSimulating Fault on Resource %d: ", fault);
+        if(avail[fault]>0){
             avail[fault] -= 1;
+            printf("Success. Remaining: %d \n", avail[fault]);
+        } else{
+            printf("Failure, resource already had 0 units available\n");
+        }
         pthread_mutex_unlock(&mutex);
         
         sleep(10);
@@ -123,7 +135,8 @@ void *faultSimulator(){
     return NULL;
 }
 
-void *deadlock_checker(){
+void *deadlockChecker(void *pidl){
+    int pid = *(int *)pidl; //NOTE: not necessary
     int flag;
     while(1){
         flag=0;
@@ -137,13 +150,12 @@ void *deadlock_checker(){
             }
             if(flag==0) //process with all of resources needs <= avail
                 break;
-            if(i=numProcesses-1){ //if made it to the end and no process had all needs less than avail
-                printf("Deadlock will occur as processes request more resources, exiting...\n");
-                freedom(-1);
+            if(i==(numProcesses-1)){ //if made it to the end and no process had all needs less than avail
+                printf("\n \tDeadlock will occur as processes request more resources, exiting...\n");
+                freedom(1);
             }
         }
         pthread_mutex_unlock(&mutex);
-
         sleep(10);
     }
     return NULL;
@@ -347,8 +359,8 @@ void freedom(int stat){ //HELPER: called either when program fails or exits, use
     free(need);
     free2DArr(hold);
     free(hold);
-    
-    exit(stat); //0 = success, else fail
+    printf("\n bye bye \n");
+    exit(stat); //0 = success, 1 = fail
 }
 void allocate2DArr(int ***arr, int rows, int cols, int type) {
 
@@ -356,7 +368,7 @@ void allocate2DArr(int ***arr, int rows, int cols, int type) {
     *arr = (int **) malloc(sizeof(int*)*rows);
     if(*arr==NULL){
         printf("ERROR: failed to allocate memory for 2D vector\n");
-        freedom(-1); 
+        freedom(1); 
     }
     //allocate second layer of pointers
     for(int i=0; i<rows; i++){
@@ -367,7 +379,7 @@ void allocate2DArr(int ***arr, int rows, int cols, int type) {
         }
         if((*arr)[i]==NULL){
             printf("ERROR: failed to allocate memory for max vector\n");
-            freedom(-1);
+            freedom(1);
         }
     }
 }
