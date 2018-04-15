@@ -1,0 +1,66 @@
+Enter the number of processes : 2
+Enter the number of distinct resource types : 2
+Enter the amount of each resource in the system
+         Resource 0 amount : 2
+         Resource 1 amount : 1
+For each process, enter the maximum amount claims allowed per resource type
+Process 0 :
+         Max # requests for Resource 0 : 2
+         Max # requests for Resource 1 : 1
+Process 1 :
+         Max # requests for Resource 0 : 1
+         Max # requests for Resource 1 : 1
+MAX:
+NEED:
+HOLD:
+Creating Process thread 0
+Creating Process thread 1
+Request for PID: 0 is: 1  0
+PID: 0 System is safe : allocated request
+Request for PID: 0 is: 1  1
+PID: 0 System is safe : allocated request
+PID: 0 has completed allocation
+Request for PID: 0 is: 1  0
+Error: requested ammount: 1, of resource: 0, exceeds need: 0
+Invalid request, try again
+PID: 0 Not enough resources available. Try again.
+Request for PID: 0 is: 0  0
+PID: 0 System is safe : allocated request
+PID: 0 has completed allocation
+
+-------------------------------------------------------------------
+
+
+Enter the number of processes : 2
+Enter the number of distinct resource types : 2
+Enter the amount of each resource in the system
+         Resource 0 amount : 2
+         Resource 1 amount : 1
+For each process, enter the maximum amount claims allowed per resource type
+Process 0 :
+         Max # requests for Resource 0 : 2
+         Max # requests for Resource 1 : 1
+Process 1 :
+         Max # requests for Resource 0 : 1
+         Max # requests for Resource 1 : 1
+MAX:
+NEED:
+HOLD:
+Creating Process thread 0
+Creating Process thread 1
+
+         Request for PID: 0 is: 1  0
+PID: 0 System is safe : allocated request
+
+         Request for PID: 0 is: 1  1
+PID: 0 System is safe : allocated request
+PID: 0 has completed allocation
+
+         Request for PID: 0 is: 1  0
+Error: requested ammount: 1, of resource: 0, exceeds need: 0
+Invalid request, try again
+PID: 0 Not enough resources available. Try again.
+
+         Request for PID: 0 is: 0  0
+PID: 0 System is safe : allocated request
+PID: 0 has completed allocation
