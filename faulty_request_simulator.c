@@ -117,10 +117,10 @@ int main()
 void *faultSimulator(){
     //int pid = *(int *)pid; //NOTE: not necessary
     while(1){ //HOW to deal with the infinite loop? how to check when processes finish
-        int rando = rand()%numResourceType+1;
+        int fault = rand()%numResourceType; //from 0 to numRT exclusive since array indexing
         
         pthread_mutex_lock(&mutex);
-        avail[rando] -= 1;
+        avail[fault] -= 1;
         pthread_mutex_unlock(&mutex);
         
         sleep(10);
