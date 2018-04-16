@@ -83,7 +83,7 @@ int main()
     debug(hold,numProcesses,numResourceType);
     
     pthread_t processes[numProcesses];
-\
+
     
     int status;
     for(i=0; i<numProcesses; i++){
