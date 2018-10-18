@@ -1,6 +1,7 @@
-# OS-A3
-## Questions
-
+# McGill ECSE 427: Operating Systems
+## Assignment #3
+### Gabriel Negash
+                       
 ### Q2
 1. **Default direction**
 Scan has been updated to move in direction of which half of the disk the start sector is. E.g. if start is in Left (_i.e._ < Max-Min/2) move left. 
